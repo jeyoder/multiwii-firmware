@@ -70,7 +70,7 @@ extern int16_t angle[2];
 
 #if BARO
   extern int32_t baroPressure;
-  extern int16_t baroTemperature; // temp in 0.01 deg
+  extern int32_t baroTemperature;
   extern int32_t baroPressureSum;
 #endif
 
@@ -120,20 +120,19 @@ extern int16_t lookupThrottleRC[11];
   // **********************
   // GPS common variables
   // **********************
-  extern int16_t  GPS_angle[2];                  // the angles that must be applied for GPS correction
+  extern int16_t  GPS_angle[2];                      // the angles that must be applied for GPS correction
   extern int32_t  GPS_coord[2];
   extern int32_t  GPS_home[2];
   extern int32_t  GPS_hold[2];
   extern uint8_t  GPS_numSat;
-  extern uint16_t GPS_distanceToHome;            // distance to home  - unit: meter
-  extern int16_t  GPS_directionToHome;           // direction to home - unit: degree
-  extern uint16_t GPS_altitude;                  // GPS altitude      - unit: meter
-  extern uint16_t GPS_speed;                     // GPS speed         - unit: cm/s
-  extern uint8_t  GPS_update;                    // a binary toogle to distinct a GPS position update
-  extern uint16_t GPS_ground_course;             //                   - unit: degree*10
-  extern uint8_t  GPS_Present;                   // Checksum from Gps serial
+  extern uint16_t GPS_distanceToHome;                          // distance to home  - unit: meter
+  extern int16_t  GPS_directionToHome;                         // direction to home - unit: degree
+  extern uint16_t GPS_altitude;                                // GPS altitude      - unit: meter
+  extern uint16_t GPS_speed;                                   // GPS speed         - unit: cm/s
+  extern uint8_t  GPS_update;                              // a binary toogle to distinct a GPS position update
+  extern uint16_t GPS_ground_course;                       //                   - unit: degree*10
+  extern uint8_t  GPS_Present;                             // Checksum from Gps serial
   extern uint8_t  GPS_Enable;
-  extern uint8_t  GPS_Frame;                     // indicates if a frame is ready to be computed
 
   #define LAT  0
   #define LON  1
@@ -173,7 +172,6 @@ extern int16_t lookupThrottleRC[11];
 
   extern volatile uint8_t  spekFrameFlags;
   extern volatile uint32_t spekTimeLast;
-  extern uint8_t  spekFrameDone;
 
   #if defined(OPENLRSv2MULTI)
     extern uint8_t pot_P,pot_I; // OpenLRS onboard potentiometers for P and I trim or other usages
@@ -199,6 +197,9 @@ extern int16_t lookupThrottleRC[11];
   extern int8_t  cosZ;
 #endif
 
-void annexCode();
+//James MW Mods
+extern uint16_t errorCount; //serial rx error counter, for debug
+extern uint16_t lightControlOut; //pwm output setting for CAMTRIG override light control output
 
+void annexCode();
 #endif /* MULTIWII_H_ */

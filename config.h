@@ -36,7 +36,7 @@
     //#define BI
     //#define TRI
     //#define QUADP
-    //#define QUADX
+    #define QUADX
     //#define Y4
     //#define Y6
     //#define HEX6
@@ -71,7 +71,7 @@
        in some cases, this value must be lowered down to 900 for some specific ESCs, otherwise they failed to initiate */
     #define MINCOMMAND  1000
 
-  /**********************************  I2C speed for old WMP config (useless config for other sensors)  *************/
+  /**********************************    I2C speed   ************************************/
     #define I2C_SPEED 100000L     //100kHz normal mode, this value must be used for a genuine WMP
     //#define I2C_SPEED 400000L   //400kHz fast mode, it works only with some WMP clones
 
@@ -146,7 +146,7 @@
       //#define MEGAWAP_V2_STD     // available here: http://www.multircshop.com                    <- confirmed by Alex
       //#define MEGAWAP_V2_ADV
       //#define HK_MultiWii_SE_V2  // Hobbyking board with MPU6050 + HMC5883L + BMP085
-      //#define HK_MultiWii_328P   // Also labeled "Hobbybro" on the back.  ITG3205 + BMA180 + BMP085 + NMC5583L + DSM2 Connector (Spektrum Satellite)  
+      #define HK_MultiWii_328P   // Also labeled "Hobbybro" on the back.  ITG3205 + BMA180 + BMP085 + NMC5583L + DSM2 Connector (Spektrum Satellite)  
       //#define RCNet_FC           // RCNet FC with MPU6050 and MS561101BA  http://www.rcnet.com
       //#define RCNet_FC_GPS       // RCNet FC with MPU6050 + MS561101BA + HMC5883L + UBLOX GPS http://www.rcnet.com
       //#define FLYDU_ULTRA        // MEGA+10DOF+MT3339 FC
@@ -231,7 +231,7 @@
    /********************************    ARM/DISARM    *********************************/
    /* optionally disable stick combinations to arm/disarm the motors.
      * In most cases one of the two options to arm/disarm via TX stick is sufficient */
-    #define ALLOW_ARM_DISARM_VIA_TX_YAW
+   // #define ALLOW_ARM_DISARM_VIA_TX_YAW
     //#define ALLOW_ARM_DISARM_VIA_TX_ROLL
 
     /********************************    SERVOS      *********************************/
@@ -254,7 +254,11 @@
 
     /* camera trigger function : activated via Rc Options in the GUI, servo output=A2 on promini */
     // trigger interval can be changed via (*GUI*) or via AUX channel
-    //#define CAMTRIG
+    
+    
+    
+    // @@@@@@@@@ NOTE @@@@@@@@@@@@ I am using CAMTRIG as a signaling output for the LED lights!!!!
+    #define CAMTRIG
     #define CAM_TIME_HIGH 1000   // the duration of HIGH state servo expressed in ms
 
   /***********************          Airplane                       ***********************/
@@ -345,7 +349,7 @@
          For PROMINI, attach sat grey to RX0.  Attach sat black to ground. */
       //#define SPEKTRUM 1024
       //#define SPEKTRUM 2048
-      //#define RX_SERIAL_PORT 1    // Forced to 0 on Pro Mini and single serial boards; Set to your choice of 0, 1, or 2 on any Mega based board (defaults to 1 on Mega).
+      //#define SPEK_SERIAL_PORT 1    // Forced to 0 on Pro Mini and single serial boards; Set to your choice of 0, 1, or 2 on any Mega based board (defaults to 1 on Mega).
       //**************************
       // Defines that allow a "Bind" of a Spektrum or Compatible Remote Receiver (aka Satellite) via Configuration GUI.
       //   Bind mode will be same as declared above, if your TX is capable.
@@ -360,11 +364,10 @@
       //#define SPEK_BIND_DATA   6
 
     /*******************************    SBUS RECIVER    ************************************/
-      /* The following line apply only for Futaba S-Bus Receiver on MEGA boards or PROMICRO boards.
+      /* The following line apply only for Futaba S-Bus Receiver on MEGA boards at RX1 only (Serial 1) or PROMICRO boards.
          You have to invert the S-Bus-Serial Signal e.g. with a Hex-Inverter like IC SN74 LS 04 */
-      //#define SBUS     PITCH,YAW,THROTTLE,ROLL,AUX1,AUX2,AUX3,AUX4,8,9,10,11,12,13,14,15,16,17  // dsm2 orangerx
-      //#define SBUS     ROLL,PITCH,THROTTLE,YAW,AUX1,AUX2,AUX3,AUX4,8,9,10,11,12,13,14,15,16,17  // T14SG
-      //#define RX_SERIAL_PORT 1
+      //#define SBUS
+      //#define SBUS_SERIAL_PORT 1
       #define SBUS_MID_OFFSET 988 //SBUS Mid-Point at 1500
 
 /*************************************************************************************************/
@@ -441,7 +444,7 @@
 
   /* only enable any of this if you must change the default pin assignment, e.g. your board does not have a specific pin */
   /* you may need to change PINx and PORTx plus #shift according to the desired pin! */
-  //#define OVERRIDE_V_BATPIN                   A0 // instead of A3    // Analog PIN 3
+  #define OVERRIDE_V_BATPIN                   A7 // OVERRIDE TO ANALOG 7 (MultiWii 328p VBAT)
 
   //#define OVERRIDE_PSENSORPIN                 A1 // instead of A2    // Analog PIN 2
 
@@ -462,10 +465,10 @@
 
   /******                Serial com speed    *********************************/
     /* This is the speed of the serial interfaces */
-    #define SERIAL0_COM_SPEED 115200
-    #define SERIAL1_COM_SPEED 115200
-    #define SERIAL2_COM_SPEED 115200
-    #define SERIAL3_COM_SPEED 115200
+    #define SERIAL0_COM_SPEED 57600
+    #define SERIAL1_COM_SPEED 57600
+    #define SERIAL2_COM_SPEED 57600
+    #define SERIAL3_COM_SPEED 57600
 
     /* interleaving delay in micro seconds between 2 readings WMP/NK in a WMP+NK config
        if the ACC calibration time is very long (20 or 30s), try to increase this delay up to 4000
@@ -536,9 +539,6 @@
 
   //#define THROTTLE_ANGLE_CORRECTION 40
   
-  /*** HEADFREE : the copter can be controled by an absolute stick orientation, whatever the yaw orientation ***/
-  //#define HEADFREE
-  
  /*************************        Advanced Headfree Mode             ********************/
  /* In Advanced Headfree mode when the copter is farther than ADV_HEADFREE_RANGE meters then 
     the  bearing between home and copter position will become the control direction 
@@ -572,10 +572,10 @@
        PITCH, ROLL and YAW is centered and THROTTLE is set to FAILSAFE_THROTTLE value. You must set this value to descending about 1m/s or so
        for best results. This value is depended from your configuration, AUW and some other params.  Next, after FAILSAFE_OFF_DELAY the copter is disarmed, 
        and motors is stopped. If RC pulse coming back before reached FAILSAFE_OFF_DELAY time, after the small quard time the RC control is returned to normal. */
-    //#define FAILSAFE                                // uncomment  to activate the failsafe function
-    #define FAILSAFE_DELAY     10                     // Guard time for failsafe activation after signal lost. 1 step = 0.1sec - 1sec in example
-    #define FAILSAFE_OFF_DELAY 200                    // Time for Landing before motors stop in 0.1sec. 1 step = 0.1sec - 20sec in example
-    #define FAILSAFE_THROTTLE  (MINTHROTTLE + 200)    // (*) Throttle level used for landing - may be relative to MINTHROTTLE - as in this case
+    #define FAILSAFE                                // uncomment  to activate the failsafe function
+    #define FAILSAFE_DELAY     5                    // Guard time for failsafe activation after signal lost. 1 step = 0.1sec - 1sec in example RIGHT NOW 0.5sec
+    #define FAILSAFE_OFF_DELAY 100                   // Time for Landing before motors stop in 0.1sec. 1 step = 0.1sec - 20sec in example RIGHT NOW 5sec
+    #define FAILSAFE_THROTTLE  1220   // (*) Throttle level used for landing - may be relative to MINTHROTTLE - as in this case (MINTHROTTLE + 200)
     
     #define FAILSAFE_DETECT_TRESHOLD  985
 
@@ -807,12 +807,13 @@
   /****           battery voltage monitoring                       ****/
   /********************************************************************/
     /* for V BAT monitoring
-       after the resistor divisor we should get [0V;5V]->[0;1023] on analog V_BATPIN
+       after the resistor divisor we should get [0V;5V]->[0;1023] on analog V_BATPIN 
+       !!!!!!! ************** ########## @@@@@@@@@@@  FOR US R2 = 47k R1 = 26.7k
        with R1=33k and R2=51k
        vbat = [0;1023]*16/VBATSCALE
        must be associated with #define BUZZER ! */
-    //#define VBAT              // uncomment this line to activate the vbat code
-    #define VBATSCALE       131 // (*) (**) change this value if readed Battery voltage is different than real voltage
+    #define VBAT              // uncomment this line to activate the vbat code
+    #define VBATSCALE       30 // (*) (**) change this value if readed Battery voltage is different than real voltage
     #define VBATNOMINAL     126 // 12,6V full battery nominal voltage - only used for lcd.telemetry
     #define VBATLEVEL_WARN1 107 // (*) (**) 10,7V
     #define VBATLEVEL_WARN2  99 // (*) (**) 9.9V
@@ -907,25 +908,11 @@
     //#define EXT_MOTOR_RANGE // using this with wii-esc requires to change MINCOMMAND to 1008 for promini and mega
 
   /**************************************************************************************/
-  /********  brushed ESC ****************************************************************/
-  /**************************************************************************************/
-    // for 328p proc
-    //#define EXT_MOTOR_32KHZ
-    //#define EXT_MOTOR_4KHZ
-    //#define EXT_MOTOR_1KHZ
-  
-    // for 32u4 proc
-    //#define EXT_MOTOR_64KHZ
-    //#define EXT_MOTOR_32KHZ
-    //#define EXT_MOTOR_16KHZ
-    //#define EXT_MOTOR_8KHZ
-
-  /**************************************************************************************/
   /***********************     motor, servo and other presets     ***********************/
   /**************************************************************************************/
     /* motors will not spin when the throttle command is in low position
        this is an alternative method to stop immediately the motors */
-    //#define MOTOR_STOP
+    #define MOTOR_STOP
 
     /* some radios have not a neutral point centered on 1500. can be changed here */
     #define MIDRC 1500
@@ -990,7 +977,7 @@
       /* Remove handling of other serial commands.
        * This includes navigating via serial the lcd.configuration menu, lcd.telemetry and permanent.log .
        * Navigating via stick inputs on tx is not affected and will work the same.  */
-      //#define SUPPRESS_OTHER_SERIAL_COMMANDS // saves  approx 0 to 100 bytes, depending on features enabled
+      #define SUPPRESS_OTHER_SERIAL_COMMANDS // saves  approx 0 to 100 bytes, depending on features enabled
 
     /**** suppress keeping the defaults for initial setup and reset in the code.
      * This requires a manual initial setup of the PIDs etc. or load and write from defaults.mwi;
@@ -1051,7 +1038,7 @@
        Read How To at http://code.google.com/p/multiwii/wiki/ESCsCalibration */
     #define ESC_CALIB_LOW  MINCOMMAND
     #define ESC_CALIB_HIGH 2000
-    //#define ESC_CALIB_CANNOT_FLY  // uncomment to activate
+   // #define ESC_CALIB_CANNOT_FLY  // uncomment to activate
 
   /****           internal frequencies                             ****/
     /* frequenies for rare cyclic actions in the main loop, depend on cycle time

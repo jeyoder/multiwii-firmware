@@ -16,10 +16,6 @@
 #define MSP_VERSION              0
 
 //to multiwii developpers/committers : do not add new MSP messages without a proper argumentation/agreement on the forum
-//range id [50-99] won't be assigned and can therefore be used for any custom multiwii fork without further MSP id conflict
-
-#define MSP_PRIVATE              1     //in+out message      to be used for a generic framework : MSP + function code (LIST/GET/SET) + data. no code yet
-
 #define MSP_IDENT                100   //out message         multitype + multiwii version + protocol version + capability variable
 #define MSP_STATUS               101   //out message         cycletime & errors_count & sensor present & box activation & current setting number
 #define MSP_RAW_IMU              102   //out message         9 DOF
@@ -41,7 +37,6 @@
 #define MSP_WP                   118   //out message         get a WP, WP# is in the payload, returns (WP#, lat, lon, alt, flags) WP#0-home, WP#16-poshold
 #define MSP_BOXIDS               119   //out message         get the permanent IDs associated to BOXes
 #define MSP_SERVO_CONF           120   //out message         Servo settings
-#define MSP_ACC_TRIM             240   //out message         get acc angle trim values
 
 #define MSP_SET_RAW_RC           200   //in message          8 rc chan
 #define MSP_SET_RAW_GPS          201   //in message          fix, numsat, lat, lon, alt, speed
@@ -57,9 +52,8 @@
 #define MSP_SET_HEAD             211   //in message          define a new heading hold direction
 #define MSP_SET_SERVO_CONF       212   //in message          Servo settings
 #define MSP_SET_MOTOR            214   //in message          PropBalance function
-#define MSP_SET_ACC_TRIM         239   //in message          set acc angle trim values
 
-#define MSP_BIND                 241   //in message          no param
+#define MSP_BIND                 240   //in message          no param
 
 #define MSP_EEPROM_WRITE         250   //in message          no param
 
@@ -179,12 +173,16 @@ void serialCom() {
         #define GPS_COND  && (GPS_SERIAL != CURRENTPORT)
       #endif      
     #endif
-    #define RX_COND
-    #if (defined(SPEKTRUM) || defined(SBUS)) && (UART_NUMBER > 1)
-      #define RX_COND && (RX_SERIAL_PORT != CURRENTPORT)
+    #define SPEK_COND
+    #if defined(SPEKTRUM) && (UART_NUMBER > 1)
+      #define SPEK_COND && (SPEK_SERIAL_PORT != CURRENTPORT)
+    #endif
+    #define SBUS_COND
+    #if defined(SBUS) && (UART_NUMBER > 1)
+      #define SBUS_COND && (SBUS_SERIAL_PORT != CURRENTPORT)
     #endif
     uint8_t cc = SerialAvailable(CURRENTPORT);
-    while (cc-- GPS_COND RX_COND) {
+    while (cc-- GPS_COND SPEK_COND SBUS_COND) {
       uint8_t bytesTXBuff = SerialUsedTXBuff(CURRENTPORT); // indicates the number of occupied bytes in TX buffer
       if (bytesTXBuff > TX_BUFFER_SIZE - 50 ) return; // ensure there is enough free TX buffer to go further (50 bytes margin)
       c = SerialRead(CURRENTPORT);
@@ -221,6 +219,9 @@ void serialCom() {
         } else if (c_state[CURRENTPORT] == HEADER_CMD && offset[CURRENTPORT] >= dataSize[CURRENTPORT]) {
           if (checksum[CURRENTPORT] == c) {  // compare calculated and transferred checksum
             evaluateCommand();  // we got a valid packet, evaluate it
+            
+          } else {
+            
           }
           c_state[CURRENTPORT] = IDLE;
           cc = 0; // no more than one MSP per port and per cycle
@@ -236,7 +237,7 @@ void  s_struct(uint8_t *cb,uint8_t siz) {
 }
 
 void s_struct_w(uint8_t *cb,uint8_t siz) {
-  headSerialReply(0);
+ headSerialReply(0);
   while(siz--) *cb++ = read8();
 }
 
@@ -245,29 +246,21 @@ void evaluateCommand() {
   uint32_t tmp=0; 
 
   switch(cmdMSP[CURRENTPORT]) {
-   case MSP_PRIVATE:
-     headSerialError(0); // we don't have any custom msp currently, so tell the gui we do not use that
-     break;
    case MSP_SET_RAW_RC:
      s_struct_w((uint8_t*)&rcSerial,16);
-     rcSerialCount = 50; // 1s transition 
+     rcSerialCount = 100; // 2s transition 
+     errorCount++;
      break;
-   #if GPS && !defined(I2C_GPS)
+   #if GPS
    case MSP_SET_RAW_GPS:
-     struct {
-       uint8_t a,b;
-       int32_t c,d;
-       int16_t e;
-       uint16_t f;
-     } set_set_raw_gps;
-     s_struct_w((uint8_t*)&set_set_raw_gps,14);
-     f.GPS_FIX = set_set_raw_gps.a;
-     GPS_numSat = set_set_raw_gps.b;
-     GPS_coord[LAT] = set_set_raw_gps.c;
-     GPS_coord[LON] = set_set_raw_gps.d;
-     GPS_altitude = set_set_raw_gps.e;
-     GPS_speed = set_set_raw_gps.f;
+     f.GPS_FIX = read8();
+     GPS_numSat = read8();
+     GPS_coord[LAT] = read32();
+     GPS_coord[LON] = read32();
+     GPS_altitude = read16();
+     GPS_speed = read16();
      GPS_update |= 2;              // New data signalisation to GPS functions
+     headSerialReply(0);
      break;
    #endif
    case MSP_SET_PID:
@@ -392,10 +385,8 @@ void evaluateCommand() {
      #if MAG
        if(f.MAG_MODE) tmp |= 1<<BOXMAG;
        #if !defined(FIXEDWING)
-         #if defined(HEADFREE)
-           if(f.HEADFREE_MODE)       tmp |= 1<<BOXHEADFREE;
-           if(rcOptions[BOXHEADADJ]) tmp |= 1<<BOXHEADADJ;
-         #endif
+         if(f.HEADFREE_MODE)       tmp |= 1<<BOXHEADFREE;
+         if(rcOptions[BOXHEADADJ]) tmp |= 1<<BOXHEADADJ;
        #endif
      #endif
      #if defined(SERVO_TILT) || defined(GIMBAL)|| defined(SERVO_MIX_TILT)
@@ -456,42 +447,25 @@ void evaluateCommand() {
    case MSP_MOTOR:
      s_struct((uint8_t*)&motor,16);
      break;
-   case MSP_ACC_TRIM:
-     s_struct((uint8_t*)&conf.angleTrim[0],4);
-     break;
-   case MSP_SET_ACC_TRIM:
-     s_struct_w((uint8_t*)&conf.angleTrim[0],4);
-     break;
    case MSP_RC:
      s_struct((uint8_t*)&rcData,RC_CHANS*2);
      break;
    #if GPS
    case MSP_RAW_GPS:
-     struct {
-       uint8_t a,b;
-       int32_t c,d;
-       int16_t e;
-       uint16_t f,g;
-     } msp_raw_gps;
-     msp_raw_gps.a     = f.GPS_FIX;
-     msp_raw_gps.b     = GPS_numSat;
-     msp_raw_gps.c     = GPS_coord[LAT];
-     msp_raw_gps.d     = GPS_coord[LON];
-     msp_raw_gps.e     = GPS_altitude;
-     msp_raw_gps.f     = GPS_speed;
-     msp_raw_gps.g     = GPS_ground_course;
-     s_struct((uint8_t*)&msp_raw_gps,16);
+     headSerialReply(16);
+     serialize8(f.GPS_FIX);
+     serialize8(GPS_numSat);
+     serialize32(GPS_coord[LAT]);
+     serialize32(GPS_coord[LON]);
+     serialize16(GPS_altitude);
+     serialize16(GPS_speed);
+     serialize16(GPS_ground_course);        // added since r1172
      break;
    case MSP_COMP_GPS:
-     struct {
-       uint16_t a;
-       int16_t b;
-       uint8_t c;
-     } msp_comp_gps;
-     msp_comp_gps.a     = GPS_distanceToHome;
-     msp_comp_gps.b     = GPS_directionToHome;
-     msp_comp_gps.c     = GPS_update & 1;
-     s_struct((uint8_t*)&msp_comp_gps,5);
+     headSerialReply(5);
+     serialize16(GPS_distanceToHome);
+     serialize16(GPS_directionToHome);
+     serialize8(GPS_update & 1);
      break;
    #endif
    case MSP_ATTITUDE:
@@ -562,15 +536,17 @@ void evaluateCommand() {
        if (wp_no == 0) {
          GPS_home[LAT] = lat;
          GPS_home[LON] = lon;
-         f.GPS_HOME_MODE = 0;          // with this flag, GPS_set_next_wp will be called in the next loop
+         f.GPS_HOME_MODE = 0;          // with this flag, GPS_set_next_wp will be called in the next loop -- OK with SERIAL GPS / OK with I2C GPS
          f.GPS_FIX_HOME  = 1;
          if (alt != 0) AltHold = alt;  // temporary implementation to test feature with apps
-       } else if (wp_no == 16) {
+       } else if (wp_no == 16) {       // OK with SERIAL GPS  --  NOK for I2C GPS / needs more code dev in order to inject GPS coord inside I2C GPS
          GPS_hold[LAT] = lat;
          GPS_hold[LON] = lon;
          if (alt != 0) AltHold = alt;  // temporary implementation to test feature with apps
-         nav_mode      = NAV_MODE_WP;
-         GPS_set_next_wp(&GPS_hold[LAT],&GPS_hold[LON]);
+         #if !defined(I2C_GPS)
+           nav_mode      = NAV_MODE_WP;
+           GPS_set_next_wp(&GPS_hold[LAT],&GPS_hold[LON]);
+         #endif
        }
      }
      headSerialReply(0);

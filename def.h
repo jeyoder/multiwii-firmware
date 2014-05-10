@@ -302,7 +302,7 @@
     #define STABLEPIN_OFF              ;
   #endif 
   #define PPM_PIN_INTERRUPT          attachInterrupt(0, rxInt, RISING); //PIN 0
-  #define RX_SERIAL_PORT             0
+  #define SPEK_SERIAL_PORT           0
   //RX PIN assignment inside the port //for PORTD
   #define THROTTLEPIN                2
   #define ROLLPIN                    4
@@ -429,8 +429,8 @@
   #define STABLEPIN_ON               ;
   #define STABLEPIN_OFF              ;
   #define PPM_PIN_INTERRUPT          DDRE &= ~(1 << 6);PORTE |= (1 << 6); EICRB |= (1 << ISC61)|(1 << ISC60); EIMSK |= (1 << INT6);
-  #if !defined(RX_SERIAL_PORT)
-    #define RX_SERIAL_PORT           1
+  #if !defined(SPEK_SERIAL_PORT)
+    #define SPEK_SERIAL_PORT         1
   #endif
   #define USB_CDC_TX                 3
   #define USB_CDC_RX                 2
@@ -569,8 +569,8 @@
   #else
     #define PPM_PIN_INTERRUPT        attachInterrupt(4, rxInt, RISING);  //PIN 19, also used for Spektrum satellite option
   #endif
-  #if !defined(RX_SERIAL_PORT)
-    #define RX_SERIAL_PORT           1
+  #if !defined(SPEK_SERIAL_PORT)
+    #define SPEK_SERIAL_PORT         1
   #endif
   //RX PIN assignment inside the port //for PORTK
   #define THROTTLEPIN                0  //PIN 62 =  PIN A8
@@ -600,10 +600,9 @@
   #define SERVO_3_PINMODE            pinMode(33,OUTPUT); pinMode(46,OUTPUT); // CAM TRIG  - alt TILT_PITCH
   #define SERVO_3_PIN_HIGH           PORTC |= 1<<4;PORTL |= 1<<3;
   #define SERVO_3_PIN_LOW            PORTC &= ~(1<<4);PORTL &= ~(1<<3);
-  #define SERVO_4_PINMODE            pinMode (37, OUTPUT);pinMode(7,OUTPUT); // new       - alt TILT_ROLL
-  #define SERVO_4_PIN_HIGH           PORTC |= 1<<0; PORTH |= 1<<4;
-  #define SERVO_4_PIN_LOW            PORTC &= ~(1<<0);PORTH &= ~(1<<4);
-
+  #define SERVO_4_PINMODE            pinMode (37, OUTPUT);                   // new       - alt TILT_ROLL
+  #define SERVO_4_PIN_HIGH           PORTC |= 1<<0;
+  #define SERVO_4_PIN_LOW            PORTC &= ~(1<<0);
   #define SERVO_5_PINMODE            pinMode(6,OUTPUT);                      // BI LEFT
   #define SERVO_5_PIN_HIGH           PORTH |= 1<<3;
   #define SERVO_5_PIN_LOW            PORTH &= ~(1<<3);
@@ -630,7 +629,7 @@
   #define LEDPIN_OFF                 PORTD &= ~(1<<4);  
   #define LEDPIN_ON                  PORTD |= (1<<4);     
   #define SPEK_BAUD_SET              UCSR0A  = (1<<U2X0); UBRR0H = ((F_CPU  / 4 / 115200 -1) / 2) >> 8; UBRR0L = ((F_CPU  / 4 / 115200 -1) / 2);
-  #define RX_SERIAL_PORT             0
+  #define SPEK_SERIAL_PORT           0
 
   /* Unavailable pins on MONGOOSE1_0 */
   #define BUZZERPIN_PINMODE          ; // D8
@@ -1396,14 +1395,13 @@
   #undef INTERNAL_I2C_PULLUPS
   #define MINTHROTTLE 1050
   #define MAXTHROTTLE 2000
-  #define EXT_MOTOR_32KHZ
+  #define EXT_MOTOR_RANGE
   #define VBAT
   #define VBATSCALE       54
   #define VBATLEVEL_WARN1 10
   #define VBATLEVEL_WARN2 10
   #define VBATLEVEL_CRIT  10
   #define NO_VBAT         10
-  #define MOTOR_STOP
 #endif
 
 #if defined(MEGAWAP_V2_STD) 
@@ -1634,6 +1632,74 @@
   #define SONAR 0
 #endif
 
+
+#if defined(MMA7455)
+  #define ACC_1G 64
+#endif
+#if defined(MMA8451Q)
+  #define ACC_1G 512
+#endif
+#if defined(ADXL345)
+  #define ACC_1G 265
+#endif
+#if defined(BMA180)
+  #define ACC_1G 255
+#endif
+#if defined(BMA280)
+  #define ACC_1G 255
+#endif
+#if defined(BMA020)
+  #define ACC_1G 63
+#endif
+#if defined(NUNCHACK)
+  #define ACC_1G 200
+#endif
+#if defined(LIS3LV02)
+  #define ACC_1G 256
+#endif
+#if defined(LSM303DLx_ACC)
+  #define ACC_1G 256
+#endif
+#if defined(ADCACC)
+  #define ACC_1G 75
+#endif
+#if defined(MPU6050)
+  #if defined(FREEIMUv04)
+    #define ACC_1G 255
+  #else
+    #define ACC_1G 512
+  #endif
+#endif
+#if defined(LSM330)
+  #define ACC_1G 256
+#endif
+#if defined(NUNCHUCK)
+  #define ACC_1G 200
+#endif
+#if !defined(ACC_1G)
+  #define ACC_1G 256
+#endif
+#define ACCZ_25deg   (int16_t)(ACC_1G * 0.90631) // 0.90631 = cos(25deg) (cos(theta) of accZ comparison)
+#define ACC_VelScale (9.80665f / 10000.0f / ACC_1G)
+
+#if defined(ITG3200)
+  #define GYRO_SCALE (4 / 14.375 * PI / 180.0 / 1000000.0) //ITG3200   14.375 LSB/(deg/s) and we ignore the last 2 bits
+#endif
+#if defined(L3G4200D)
+  #define GYRO_SCALE ((4.0f * PI * 70.0f)/(1000.0f * 180.0f * 1000000.0f))
+#endif
+#if defined(MPU6050)
+  #define GYRO_SCALE (4 / 16.4 * PI / 180.0 / 1000000.0)   //MPU6050 and MPU3050   16.4 LSB/(deg/s) and we ignore the last 2 bits
+#endif
+#if defined(LSM330)
+  #define GYRO_SCALE ((4.0f * PI * 70.0f)/(1000.0f * 180.0f * 1000000.0f)) // like L3G4200D
+#endif
+#if defined(MPU3050)
+  #define GYRO_SCALE (4 / 16.4 * PI / 180.0 / 1000000.0)   //MPU6050 and MPU3050   16.4 LSB/(deg/s) and we ignore the last 2 bits
+#endif
+#if defined(WMP)
+  #define GYRO_SCALE (1.0f/200e6f)
+#endif
 
 /**************************************************************************************/
 /***************      Multitype decleration for the GUI's          ********************/

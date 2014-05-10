@@ -5,7 +5,6 @@ void configureReceiver();
 void computeRC();
 uint16_t readRawRC(uint8_t chan);
 void readSpektrum(void);
-void readSBus(void);
 #if defined(OPENLRSv2MULTI)
   void initOpenLRS(void);
   void Read_OpenLRS_RC(void);

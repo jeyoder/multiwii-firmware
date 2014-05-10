@@ -57,10 +57,8 @@ const char boxnames[] PROGMEM = // names for dynamic generation of config GUI
   #endif
   #if MAG
     "MAG;"
-    #if defined(HEADFREE)
-      "HEADFREE;"
-      "HEADADJ;"
-    #endif
+    "HEADFREE;"
+    "HEADADJ;"  
   #endif
   #if defined(SERVO_TILT) || defined(GIMBAL)|| defined(SERVO_MIX_TILT)
     "CAMSTAB;"
@@ -110,10 +108,8 @@ const uint8_t boxids[] PROGMEM = {// permanent IDs associated to boxes. This way
   #endif
   #if MAG
     5, //"MAG;"
-    #if defined(HEADFREE)
-      6, //"HEADFREE;"
-      7, //"HEADADJ;"
-    #endif
+    6, //"HEADFREE;"
+    7, //"HEADADJ;"  
   #endif
   #if defined(SERVO_TILT) || defined(GIMBAL)|| defined(SERVO_MIX_TILT)
     8, //"CAMSTAB;"
@@ -163,7 +159,6 @@ int32_t  AltHold; // in cm
 int16_t  sonarAlt;
 int16_t  BaroPID = 0;
 int16_t  errorAltitudeI = 0;
-
 // **************
 // gyro+acc IMU
 // **************
@@ -269,10 +264,9 @@ uint8_t rcSerialCount = 0;   // a counter to select legacy RX when there is no m
 int16_t lookupPitchRollRC[5];// lookup table for expo & RC rate PITCH+ROLL
 int16_t lookupThrottleRC[11];// lookup table for expo & mid THROTTLE
 
-#if defined(SPEKTRUM) || defined(SBUS)
+#if defined(SPEKTRUM)
   volatile uint8_t  spekFrameFlags;
   volatile uint32_t spekTimeLast;
-  uint8_t  spekFrameDone;
 #endif
 
 #if defined(OPENLRSv2MULTI)
@@ -316,7 +310,6 @@ conf_t conf;
   uint16_t GPS_ground_course = 0;                       //                   - unit: degree*10
   uint8_t  GPS_Present = 0;                             // Checksum from Gps serial
   uint8_t  GPS_Enable  = 0;
-  uint8_t  GPS_Frame   = 0;
 
   // The desired bank towards North (Positive) or South (Negative) : latitude
   // The desired bank towards East (Positive) or West (Negative)   : longitude
@@ -329,9 +322,13 @@ conf_t conf;
  
 #if BARO
   int32_t baroPressure;
-  int16_t baroTemperature;
+  int32_t baroTemperature;
   int32_t baroPressureSum;
 #endif
+
+//variables for James MW Mods
+uint16_t errorCount;
+uint16_t lightControlOut;
 
 void annexCode() { // this code is excetuted at each loop and won't interfere with control loop if it lasts less than 650 microseconds
   static uint32_t calibratedAccTime;
@@ -371,16 +368,14 @@ void annexCode() { // this code is excetuted at each loop and won't interfere wi
   tmp2 = tmp/256; // range [0;9]
   rcCommand[THROTTLE] = lookupThrottleRC[tmp2] + (tmp-tmp2*256) * (lookupThrottleRC[tmp2+1]-lookupThrottleRC[tmp2]) / 256; // [0;2559] -> expo -> [conf.minthrottle;MAXTHROTTLE]
 
-  #if defined(HEADFREE)
-    if(f.HEADFREE_MODE) { //to optimize
-      float radDiff = (att.heading - headFreeModeHold) * 0.0174533f; // where PI/180 ~= 0.0174533
-      float cosDiff = cos(radDiff);
-      float sinDiff = sin(radDiff);
-      int16_t rcCommand_PITCH = rcCommand[PITCH]*cosDiff + rcCommand[ROLL]*sinDiff;
-      rcCommand[ROLL] =  rcCommand[ROLL]*cosDiff - rcCommand[PITCH]*sinDiff; 
-      rcCommand[PITCH] = rcCommand_PITCH;
-    }
-  #endif
+  if(f.HEADFREE_MODE) { //to optimize
+    float radDiff = (att.heading - headFreeModeHold) * 0.0174533f; // where PI/180 ~= 0.0174533
+    float cosDiff = cos(radDiff);
+    float sinDiff = sin(radDiff);
+    int16_t rcCommand_PITCH = rcCommand[PITCH]*cosDiff + rcCommand[ROLL]*sinDiff;
+    rcCommand[ROLL] =  rcCommand[ROLL]*cosDiff - rcCommand[PITCH]*sinDiff; 
+    rcCommand[PITCH] = rcCommand_PITCH;
+  }
 
   // query at most one multiplexed analog channel per MWii cycle
   static uint8_t analogReader =0;
@@ -432,6 +427,8 @@ void annexCode() { // this code is excetuted at each loop and won't interfere wi
           analog.vbat = ((vsum /VBAT_SMOOTH) * 16) / conf.vbatscale; // result is Vbatt in 0.1V steps
         #endif
       #endif
+  //    analog.vbat = errorCount;
+  //analog.vbat = lightControlOut;
       break;
   }
   #endif // VBAT
@@ -558,6 +555,23 @@ void annexCode() { // this code is excetuted at each loop and won't interfere wi
       #endif
     #endif
   }
+  
+  //@@@@@@@@@@@@@ CAMTRIG LIGHT CONTROL OVERRIDE MOD control lightControlOut
+  if(f.ARMED) {
+    if(rcSerialCount == 0) { // lost comm
+      lightControlOut = 2000;
+    } else if (analog.vbat <= conf.vbatlevel_crit) { //critical battery
+      lightControlOut = 1800;
+    } else if (analog.vbat <= conf.vbatlevel_warn2) { //warning2 level battery
+      lightControlOut = 1600;
+    } else if (analog.vbat <= conf.vbatlevel_warn1) { //warn1 level battery
+      lightControlOut = 1400;
+    } else {
+      lightControlOut = 1200; // OK & Armed
+    } 
+  } else { //not armed
+    lightControlOut = 1000; //disarmed
+  }
 }
 
 void setup() {
@@ -626,7 +640,7 @@ void setup() {
     initOpenLRS();
   #endif
   initSensors();
-  #if GPS
+  #if defined(I2C_GPS) || defined(GPS_SERIAL) || defined(GPS_FROM_OSD)
     GPS_set_pids();
   #endif
   previousTime = micros();
@@ -639,28 +653,28 @@ void setup() {
     for(uint8_t j=0; j<=PMOTOR_SUM; j++) pMeter[j]=0;
   #endif
   /************************************/
-  #if GPS
-    #if defined(GPS_SERIAL)
-      GPS_SerialInit();
-      for(uint8_t j=0;j<=5;j++){
-        GPS_NewData(); 
-        LEDPIN_ON
-        delay(20);
-        LEDPIN_OFF
-        delay(80);
-      }
-      #if defined(GPS_PROMINI)
-        if(!GPS_Present){
-          SerialEnd(GPS_SERIAL);
-          SerialOpen(0,SERIAL0_COM_SPEED);
-        }
-      #else
-        GPS_Present = 1;
-      #endif
-      GPS_Enable = GPS_Present;    
-    #else
-      GPS_Enable = 1;
+  #if defined(GPS_SERIAL)
+    GPS_SerialInit();
+    for(uint8_t j=0;j<=5;j++){
+      GPS_NewData(); 
+      LEDPIN_ON
+      delay(20);
+      LEDPIN_OFF
+      delay(80);
+    }
+    if(!GPS_Present){
+      SerialEnd(GPS_SERIAL);
+      SerialOpen(0,SERIAL0_COM_SPEED);
+    }
+    #if !defined(GPS_PROMINI)
+      GPS_Present = 1;
     #endif
+    GPS_Enable = GPS_Present;    
+  #endif
+  /************************************/
+ 
+  #if defined(I2C_GPS) || defined(GPS_FROM_OSD)
+   GPS_Enable = 1;
   #endif
   
   #if defined(LCD_ETPP) || defined(LCD_LCD03) || defined(OLED_I2C_128x64) || defined(OLED_DIGOLE) || defined(LCD_TELEMETRY_STEP)
@@ -696,6 +710,9 @@ void setup() {
     //plog.running = 0;       // toggle on arm & disarm to monitor for clean shutdown vs. powercut
   #endif
   
+  #ifdef FAILSAFE
+    conf.failsafe_throttle = FAILSAFE_THROTTLE;
+  #endif
   debugmsg_append_str("initialization completed\n");
 }
 
@@ -710,9 +727,7 @@ void go_arm() {
     ) {
     if(!f.ARMED && !f.BARO_MODE) { // arm now!
       f.ARMED = 1;
-      #if defined(HEADFREE)
-        headFreeModeHold = att.heading;
-      #endif
+      headFreeModeHold = att.heading;
       magHold = att.heading;
       #if defined(VBAT)
         if (analog.vbat > NO_VBAT) vbatMin = analog.vbat;
@@ -776,36 +791,32 @@ void loop () {
   int16_t deltaSum;
   int16_t AngleRateTmp, RateError;
 #endif
-  static uint16_t rcTime  = 0;
+  static uint32_t rcTime  = 0;
   static int16_t initialThrottleHold;
+  static uint32_t timestamp_fixated = 0;
   int16_t rc;
   int32_t prop = 0;
 
   #if defined(SPEKTRUM)
     if (spekFrameFlags == 0x01) readSpektrum();
   #endif
-
-  #if defined(SBUS)
-    if (spekFrameFlags == 0x01) readSBus();
-  #endif
-
+  
   #if defined(OPENLRSv2MULTI) 
     Read_OpenLRS_RC();
   #endif 
 
-  #if defined(SPEKTRUM) || defined(SBUS)
-  if ((spekFrameDone == 0x01) || ((int16_t)(currentTime-rcTime) >0 )) { 
-    spekFrameDone = 0x00;
-  #else
-  if ((int16_t)(currentTime-rcTime) >0 ) { // 50Hz
-  #endif
+  if (currentTime > rcTime ) { // 50Hz
     rcTime = currentTime + 20000;
     computeRC();
     // Failsafe routine - added by MIS
     #if defined(FAILSAFE)
-      if ( failsafeCnt > (5*FAILSAFE_DELAY) && f.ARMED) {                  // Stabilize, and set Throttle to specified level
-        for(i=0; i<3; i++) rcData[i] = MIDRC;                               // after specified guard time after RC signal is lost (in 0.1sec)
-        rcData[THROTTLE] = conf.failsafe_throttle;
+      if ( (failsafeCnt > (5*FAILSAFE_DELAY)) && f.ARMED) {                  // Stabilize, and set Throttle to specified level
+       if(rcData[THROTTLE] <= 1000) { //disarm the copter instead of entering failsafe if the throttle is 0
+        go_disarm(); 
+        f.OK_TO_ARM = 0; // prevent restart
+       }
+       for(i=0; i<3; i++) rcData[i] = MIDRC;                               // after specified guard time after RC signal is lost (in 0.1sec)
+        rcData[THROTTLE] = /*conf.failsafe_throttle*/ FAILSAFE_THROTTLE;   //don't use crappy eeprom crap
         if (failsafeCnt > 5*(FAILSAFE_DELAY+FAILSAFE_OFF_DELAY)) {          // Turn OFF motors after specified Time (in 0.1sec)
           go_disarm();     // This will prevent the copter to automatically rearm if failsafe shuts it down and prevents
           f.OK_TO_ARM = 0; // to restart accidentely by just reconnect to the tx - you will have to switch off first to rearm
@@ -846,7 +857,7 @@ void loop () {
       #endif
       if (conf.activate[BOXARM] > 0) {             // Arming/Disarming via ARM BOX
         if ( rcOptions[BOXARM] && f.OK_TO_ARM ) go_arm(); else if (f.ARMED) go_disarm();
-      }
+      } 
     }
     if(rcDelayCommand == 20) {
       if(f.ARMED) {                   // actions during armed
@@ -1034,23 +1045,21 @@ void loop () {
       } else {
         f.MAG_MODE = 0;
       }
-      #if defined(HEADFREE)
-        if (rcOptions[BOXHEADFREE]) {
-          if (!f.HEADFREE_MODE) {
-            f.HEADFREE_MODE = 1;
-          }
-          #if defined(ADVANCED_HEADFREE)
-            if ((f.GPS_FIX && GPS_numSat >= 5) && (GPS_distanceToHome > ADV_HEADFREE_RANGE) ) {
-              if (GPS_directionToHome < 180)  {headFreeModeHold = GPS_directionToHome + 180;} else {headFreeModeHold = GPS_directionToHome - 180;}
-            }
-          #endif
-        } else {
-          f.HEADFREE_MODE = 0;
+      if (rcOptions[BOXHEADFREE]) {
+        if (!f.HEADFREE_MODE) {
+          f.HEADFREE_MODE = 1;
         }
-        if (rcOptions[BOXHEADADJ]) {
-          headFreeModeHold = att.heading; // acquire new heading
-        }
+	  #if defined(ADVANCED_HEADFREE)
+		if ((f.GPS_FIX && GPS_numSat >= 5) && (GPS_distanceToHome > ADV_HEADFREE_RANGE) ) {
+            if (GPS_directionToHome < 180)  {headFreeModeHold = GPS_directionToHome + 180;} else {headFreeModeHold = GPS_directionToHome - 180;}
+         }
       #endif
+      } else {
+        f.HEADFREE_MODE = 0;
+      }
+      if (rcOptions[BOXHEADADJ]) {
+        headFreeModeHold = att.heading; // acquire new heading
+      }
     #endif
     
     #if GPS
@@ -1061,8 +1070,12 @@ void loop () {
             f.GPS_HOME_MODE = 1;
             f.GPS_HOLD_MODE = 0;
             GPSNavReset = 0;
-            GPS_set_next_wp(&GPS_home[LAT],&GPS_home[LON]);
-            nav_mode    = NAV_MODE_WP;
+            #if defined(I2C_GPS)
+              GPS_I2C_command(I2C_GPS_COMMAND_START_NAV,0);        //waypoint zero
+            #else // SERIAL
+              GPS_set_next_wp(&GPS_home[LAT],&GPS_home[LON]);
+              nav_mode    = NAV_MODE_WP;
+            #endif
           }
         } else {
           f.GPS_HOME_MODE = 0;
@@ -1070,10 +1083,14 @@ void loop () {
             if (!f.GPS_HOLD_MODE) {
               f.GPS_HOLD_MODE = 1;
               GPSNavReset = 0;
-              GPS_hold[LAT] = GPS_coord[LAT];
-              GPS_hold[LON] = GPS_coord[LON];
-              GPS_set_next_wp(&GPS_hold[LAT],&GPS_hold[LON]);
-              nav_mode = NAV_MODE_POSHOLD;
+              #if defined(I2C_GPS)
+                GPS_I2C_command(I2C_GPS_COMMAND_POSHOLD,0);
+              #else
+                GPS_hold[LAT] = GPS_coord[LAT];
+                GPS_hold[LON] = GPS_coord[LON];
+                GPS_set_next_wp(&GPS_hold[LAT],&GPS_hold[LON]);
+                nav_mode = NAV_MODE_POSHOLD;
+              #endif
             }
           } else {
             f.GPS_HOLD_MODE = 0;
@@ -1087,7 +1104,9 @@ void loop () {
       } else {
         f.GPS_HOME_MODE = 0;
         f.GPS_HOLD_MODE = 0;
-        nav_mode = NAV_MODE_NONE;
+        #if !defined(I2C_GPS)
+          nav_mode = NAV_MODE_NONE;
+        #endif
       }
     #endif
     
@@ -1098,32 +1117,31 @@ void loop () {
  
   } else { // not in rc loop
     static uint8_t taskOrder=0; // never call all functions in the same loop, to avoid high delay spikes
+    if(taskOrder>4) taskOrder-=5;
     switch (taskOrder) {
       case 0:
         taskOrder++;
         #if MAG
-          if (Mag_getADC() != 0) break; // 320 µs
+          if (Mag_getADC()) break; // max 350 µs (HMC5883) // only break when we actually did something
         #endif
       case 1:
         taskOrder++;
         #if BARO
-          if (Baro_update() != 0) break; // for MS baro: I2C set and get: 220 us  -  presure and temperature computation 160 us
+          if (Baro_update() != 0 ) break;
         #endif
       case 2:
         taskOrder++;
         #if BARO
-          if (getEstimatedAltitude() != 0) break; // 280 us
+          if (getEstimatedAltitude() !=0) break;
         #endif    
       case 3:
         taskOrder++;
         #if GPS
-          if(GPS_Enable) {  
-            if (GPS_Compute() != 0) break;  // performs computation on new frame only if present
-            if (GPS_NewData() != 0) break;  // SERIAL: try to detect a new nav frame based on the current received buffer --- I2C: 160 us with no new data / 1250us! with new data 
-          }
+          if(GPS_Enable) GPS_NewData();
+          break;
         #endif
       case 4:
-        taskOrder=0;
+        taskOrder++;
         #if SONAR
           Sonar_update(); //debug[2] = sonarAlt;
         #endif
@@ -1231,33 +1249,33 @@ void loop () {
 
     ITerm = (errorGyroI[axis]>>7)*conf.pid[axis].I8>>6;                        // 16 bits is ok here 16000/125 = 128 ; 128*250 = 32000
 
-    PTerm = mul(rc,conf.pid[axis].P8)>>6;
-    
+    PTerm = (int32_t)rc*conf.pid[axis].P8>>6;
+
     if (f.ANGLE_MODE || f.HORIZON_MODE) { // axis relying on ACC
       // 50 degrees max inclination
       errorAngle         = constrain(rc + GPS_angle[axis],-500,+500) - att.angle[axis] + conf.angleTrim[axis]; //16 bits is ok here
       errorAngleI[axis]  = constrain(errorAngleI[axis]+errorAngle,-10000,+10000);                                                // WindUp     //16 bits is ok here
 
-      PTermACC           = mul(errorAngle,conf.pid[PIDLEVEL].P8)>>7; // 32 bits is needed for calculation: errorAngle*P8 could exceed 32768   16 bits is ok for result
-
+      PTermACC           = ((int32_t)errorAngle*conf.pid[PIDLEVEL].P8)>>7; // 32 bits is needed for calculation: errorAngle*P8 could exceed 32768   16 bits is ok for result
+      
       int16_t limit      = conf.pid[PIDLEVEL].D8*5;
       PTermACC           = constrain(PTermACC,-limit,+limit);
 
-      ITermACC           = mul(errorAngleI[axis],conf.pid[PIDLEVEL].I8)>>12;   // 32 bits is needed for calculation:10000*I8 could exceed 32768   16 bits is ok for result
+      ITermACC           = ((int32_t)errorAngleI[axis]*conf.pid[PIDLEVEL].I8)>>12;   // 32 bits is needed for calculation:10000*I8 could exceed 32768   16 bits is ok for result
 
       ITerm              = ITermACC + ((ITerm-ITermACC)*prop>>9);
       PTerm              = PTermACC + ((PTerm-PTermACC)*prop>>9);
     }
 
-    PTerm -= mul(imu.gyroData[axis],dynP8[axis])>>6; // 32 bits is needed for calculation   
-
+    PTerm -= ((int32_t)imu.gyroData[axis]*dynP8[axis])>>6; // 32 bits is needed for calculation   
+    
     delta          = imu.gyroData[axis] - lastGyro[axis];  // 16 bits is ok here, the dif between 2 consecutive gyro reads is limited to 800
     lastGyro[axis] = imu.gyroData[axis];
     DTerm          = delta1[axis]+delta2[axis]+delta;
     delta2[axis]   = delta1[axis];
     delta1[axis]   = delta;
  
-    DTerm = mul(DTerm,dynD8[axis])>>5;        // 32 bits is needed for calculation
+    DTerm = ((int32_t)DTerm*dynD8[axis])>>5;        // 32 bits is needed for calculation
 
     axisPID[axis] =  PTerm + ITerm - DTerm;
   }
@@ -1266,14 +1284,14 @@ void loop () {
   #define GYRO_P_MAX 300
   #define GYRO_I_MAX 250
 
-  rc = mul(rcCommand[YAW] , (2*conf.yawRate + 30))  >> 5;
+  rc = (int32_t)rcCommand[YAW] * (2*conf.yawRate + 30)  >> 5;
 
   error = rc - imu.gyroData[YAW];
-  errorGyroI_YAW  += mul(error,conf.pid[YAW].I8);
+  errorGyroI_YAW  += (int32_t)error*conf.pid[YAW].I8;
   errorGyroI_YAW  = constrain(errorGyroI_YAW, 2-((int32_t)1<<28), -2+((int32_t)1<<28));
   if (abs(rc) > 50) errorGyroI_YAW = 0;
   
-  PTerm = mul(error,conf.pid[YAW].P8)>>6;
+  PTerm = (int32_t)error*conf.pid[YAW].P8>>6;
   #ifndef COPTER_WITH_SERVO
     int16_t limit = GYRO_P_MAX-conf.pid[YAW].D8;
     PTerm = constrain(PTerm,-limit,+limit);
