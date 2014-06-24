@@ -561,16 +561,24 @@ void annexCode() { // this code is excetuted at each loop and won't interfere wi
     if(rcSerialCount == 0) { // lost comm
       lightControlOut = 2000;
     } else if (analog.vbat <= conf.vbatlevel_crit) { //critical battery
-      lightControlOut = 1800;
+      lightControlOut = 1900;
     } else if (analog.vbat <= conf.vbatlevel_warn2) { //warning2 level battery
-      lightControlOut = 1600;
+      lightControlOut = 1800;
     } else if (analog.vbat <= conf.vbatlevel_warn1) { //warn1 level battery
-      lightControlOut = 1400;
+      lightControlOut = 1700;
     } else {
-      lightControlOut = 1200; // OK & Armed
+      lightControlOut = 1600; // OK & Armed
     } 
   } else { //not armed
-    lightControlOut = 1000; //disarmed
+    if (analog.vbat <= conf.vbatlevel_crit) { //critical battery
+      lightControlOut = 1500;
+    } else if (analog.vbat <= conf.vbatlevel_warn2) { //warning2 level battery
+      lightControlOut = 1400;
+    } else if (analog.vbat <= conf.vbatlevel_warn1) { //warn1 level battery
+      lightControlOut = 1300;
+    } else {
+      lightControlOut = 1200; // OK & disarmed
+    } 
   }
 }
 
