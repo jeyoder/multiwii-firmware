@@ -231,8 +231,8 @@
    /********************************    ARM/DISARM    *********************************/
    /* optionally disable stick combinations to arm/disarm the motors.
      * In most cases one of the two options to arm/disarm via TX stick is sufficient */
-   // #define ALLOW_ARM_DISARM_VIA_TX_YAW
-    //#define ALLOW_ARM_DISARM_VIA_TX_ROLL
+    //#define ALLOW_ARM_DISARM_VIA_TX_YAW
+    #define ALLOW_ARM_DISARM_VIA_TX_ROLL
 
     /********************************    SERVOS      *********************************/
     /* info on which servos connect where and how to setup can be found here
@@ -390,7 +390,7 @@
       /* possibility to use PIN8 or PIN12 as the AUX2 RC input (only one, not both)
          it deactivates in this case the POWER PIN (pin 12) or the BUZZER PIN (pin 8) */
       //#define RCAUXPIN8
-      //#define RCAUXPIN12
+      #define RCAUXPIN12
 
 
   /**************************************************************************************/
@@ -572,9 +572,9 @@
        PITCH, ROLL and YAW is centered and THROTTLE is set to FAILSAFE_THROTTLE value. You must set this value to descending about 1m/s or so
        for best results. This value is depended from your configuration, AUW and some other params.  Next, after FAILSAFE_OFF_DELAY the copter is disarmed, 
        and motors is stopped. If RC pulse coming back before reached FAILSAFE_OFF_DELAY time, after the small quard time the RC control is returned to normal. */
-    #define FAILSAFE                                // uncomment  to activate the failsafe function
-    #define FAILSAFE_DELAY     5                    // Guard time for failsafe activation after signal lost. 1 step = 0.1sec - 1sec in example RIGHT NOW 0.5sec
-    #define FAILSAFE_OFF_DELAY 100                   // Time for Landing before motors stop in 0.1sec. 1 step = 0.1sec - 20sec in example RIGHT NOW 5sec
+    #define FAILSAFE                                 // uncomment  to activate the failsafe function
+    #define FAILSAFE_DELAY     10                    // Guard time for failsafe activation after signal lost. 1 step = 0.1sec - 1sec in example 
+    #define FAILSAFE_OFF_DELAY 15                   // Time for Landing before motors stop in 0.1sec. 1 step = 0.1sec - 20sec in example RIGHT NOW 5sec
     #define FAILSAFE_THROTTLE  1220   // (*) Throttle level used for landing - may be relative to MINTHROTTLE - as in this case (MINTHROTTLE + 200)
     
     #define FAILSAFE_DETECT_TRESHOLD  985

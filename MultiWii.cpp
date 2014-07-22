@@ -558,7 +558,7 @@ void annexCode() { // this code is excetuted at each loop and won't interfere wi
   
   //@@@@@@@@@@@@@ CAMTRIG LIGHT CONTROL OVERRIDE MOD control lightControlOut
   if(f.ARMED) {
-    if(rcSerialCount == 0) { // lost comm
+    if(failsafeCnt > 5*FAILSAFE_DELAY) { // lost comm
       lightControlOut = 2000;
     } else if (analog.vbat <= conf.vbatlevel_crit) { //critical battery
       lightControlOut = 1900;
