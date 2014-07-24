@@ -537,7 +537,7 @@
   /* Automatically increase throttle based on the angle of the copter
      Original idea by Kraut Rob, first implementation HAdrian							*/
 
-  //#define THROTTLE_ANGLE_CORRECTION 40
+  #define THROTTLE_ANGLE_CORRECTION 80
   
  /*************************        Advanced Headfree Mode             ********************/
  /* In Advanced Headfree mode when the copter is farther than ADV_HEADFREE_RANGE meters then 
@@ -601,9 +601,9 @@
      Use an output pin to control landing lights.
      They can be switched automatically when used in conjunction
      with altitude data from a sonar unit. */
-    //#define LANDING_LIGHTS_DDR DDRC
-    //#define LANDING_LIGHTS_PORT PORTC
-    //#define LANDING_LIGHTS_BIT PORTC0
+    #define LANDING_LIGHTS_DDR DDRC
+    #define LANDING_LIGHTS_PORT PORTC
+    #define LANDING_LIGHTS_BIT PORTC0
     //#define LANDING_LIGHTS_INVERT
 
     /* altitude above ground (in cm) as reported by sonar */
@@ -611,7 +611,10 @@
 
     /* adopt the flasher pattern for landing light LEDs */
     //#define LANDING_LIGHTS_ADOPT_LED_FLASHER_PATTERN
-
+    
+    /*stop landing lights from blinking patterns*/
+    #define LANDING_LIGHTS_NOBLINK
+    
   /*************************    INFLIGHT ACC Calibration    *****************************/
     /* This will activate the ACC-Inflight calibration if unchecked */
     //#define INFLIGHT_ACC_CALIBRATION
@@ -626,7 +629,7 @@
 
     /* introduce a deadband around the stick center
        Must be greater than zero, comment if you dont want a deadband on roll, pitch and yaw */
-    //#define DEADBAND 6
+    #define DEADBAND 10
 
   /**************************************************************************************/
   /***********************                  GPS                **************************/
@@ -912,7 +915,7 @@
   /**************************************************************************************/
     /* motors will not spin when the throttle command is in low position
        this is an alternative method to stop immediately the motors */
-    #define MOTOR_STOP
+ //   #define MOTOR_STOP
 
     /* some radios have not a neutral point centered on 1500. can be changed here */
     #define MIDRC 1500
@@ -1038,8 +1041,7 @@
        Read How To at http://code.google.com/p/multiwii/wiki/ESCsCalibration */
     #define ESC_CALIB_LOW  MINCOMMAND
     #define ESC_CALIB_HIGH 2000
-   // #define ESC_CALIB_CANNOT_FLY  // uncomment to activate
-
+ //   #define ESC_CALIB_CANNOT_FLY  // uncomment to activate
   /****           internal frequencies                             ****/
     /* frequenies for rare cyclic actions in the main loop, depend on cycle time
        time base is main loop cycle time - a value of 6 means to trigger the action every 6th run through the main loop

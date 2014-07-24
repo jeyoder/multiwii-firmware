@@ -322,16 +322,20 @@ void blinkLED(uint8_t num, uint8_t ontime,uint8_t repeat) {
       #if defined(LED_FLASHER)
         switch_led_flasher(1);
       #endif
-      #if defined(LANDING_LIGHTS_DDR)
-        switch_landing_lights(1);
+      #ifndef LANDING_LIGHTS_NOBLINK
+        #if defined(LANDING_LIGHTS_DDR)
+          switch_landing_lights(1);
+        #endif
       #endif
       LEDPIN_TOGGLE; // switch LEDPIN state
       delay(ontime);
       #if defined(LED_FLASHER)
         switch_led_flasher(0);
       #endif
-      #if defined(LANDING_LIGHTS_DDR)
-        switch_landing_lights(0);
+      #ifndef LANDING_LIGHTS_NOBLINK
+        #if defined(LANDING_LIGHTS_DDR)
+          switch_landing_lights(0);
+        #endif
       #endif
     }
     delay(60); //wait 60 ms
