@@ -55,6 +55,12 @@ void configureReceiver() {
     }
     PCICR = PCIR_PORT_BIT;
     
+    /* Pin to interrupt map:
+     * D0-D7 = PCINT 16-23 = PCIR2 = PD = PCIE2 = pcmsk2
+     * D8-D13 = PCINT 0-5 = PCIR0 = PB = PCIE0 = pcmsk0
+     * A0-A5 (D14-D19) = PCINT 8-13 = PCIR1 = PC = PCIE1 = pcmsk1
+     */
+ 
     /*************    atmega328P's Specific Aux2 Pin Setup    *********************/
     #if defined(PROMINI)
      #if defined(RCAUXPIN)
@@ -65,6 +71,10 @@ void configureReceiver() {
         #if defined(RCAUXPIN12)
           PCMSK0 = (1 << 4);
         #endif
+      #endif
+      #if defined(RCAUX3PINA1)
+        PCICR |= (1 << 1); //PCINT activated for A0-A7 by enabling PCIE1 bit of PCICR
+        PCMSK1 = (1 << 1); //Mask interrupts for PCINT only on A1 (bit 1 of PCMSK1)
       #endif
     #endif
     
@@ -187,7 +197,7 @@ void configureReceiver() {
       }
     #endif
   }
-  /*********************      atmega328P's Aux2 Pins      *************************/
+  /*********************      atmega328P's Aux2 and Aux3 ;) Pins      *************************/
   #if defined(PROMINI)
     #if defined(RCAUXPIN)
     /* this ISR is a simplification of the previous one for PROMINI on port D
@@ -212,6 +222,22 @@ void configureReceiver() {
         dTime = cTime-edgeTime; if (900<dTime && dTime<2200) rcValue[0] = dTime; // just a verification: the value must be in the range [1000;2000] + some margin
       } else edgeTime = cTime;    // if the bit 2 is at a high state (ascending PPM pulse), we memorize the time
     }
+    #endif
+    
+    #if defined(RCAUX3PINA1)
+      //A1 AUX3
+      ISR(PCINT1_vect) { //We know what port has change because interrupts are only enabled for A1 aka PC1 aka PCINT9
+        uint8_t pin;
+      uint16_t cTime,dTime;
+      static uint16_t edgeTime;
+    
+      pin = PINC;
+      cTime = micros();
+      sei();
+      if (!(pin & 1<<1)) { //check bit 1 of PINC is not high
+        dTime = cTime-edgeTime; if (900<dTime && dTime<2200) rcValue[1] = dTime; // it seems that somehow rcValue[1] is AUX3
+      } else edgeTime = cTime;    // if the bit 1 is at a high state (ascending PPM pulse), we memorize the time
+      }
     #endif
   #endif
   

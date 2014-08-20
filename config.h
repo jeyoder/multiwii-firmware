@@ -77,7 +77,7 @@
 
   /***************************    Internal i2c Pullups   ********************************/
     /* enable internal I2C pull ups (in most cases it is better to use external pullups) */
-    //#define INTERNAL_I2C_PULLUPS
+    #define INTERNAL_I2C_PULLUPS
 
   /**************************************************************************************/
   /*****************          boards and sensor definitions            ******************/
@@ -392,7 +392,10 @@
       //#define RCAUXPIN8
       #define RCAUXPIN12
 
-
+    /*********************************    Aux 3 Pin     ***********************************/
+    /* uncomment this define to turn A1 into AUX3 */
+      #define RCAUX3PINA1
+    
   /**************************************************************************************/
   /*****************             Teensy 2.0 Support                    ******************/
   /**************************************************************************************/
@@ -537,7 +540,7 @@
   /* Automatically increase throttle based on the angle of the copter
      Original idea by Kraut Rob, first implementation HAdrian							*/
 
-  #define THROTTLE_ANGLE_CORRECTION 80
+  #define THROTTLE_ANGLE_CORRECTION 60
   
  /*************************        Advanced Headfree Mode             ********************/
  /* In Advanced Headfree mode when the copter is farther than ADV_HEADFREE_RANGE meters then 
@@ -553,7 +556,7 @@
 
   /************************        continuous gyro calibration        ********************/
   /* Gyrocalibration will be repeated if copter is moving during calibration. */
-    //#define GYROCALIBRATIONFAILSAFE
+    #define GYROCALIBRATIONFAILSAFE
 
   /************************        AP FlightMode        **********************************/
     /* Temporarily Disables GPS_HOLD_MODE to be able to make it possible to adjust the Hold-position when moving the sticks.*/
@@ -665,7 +668,7 @@
        including some navigation functions
        contribution from EOSBandi   http://code.google.com/p/i2c-gps-nav/ 
        You have to use at least I2CGpsNav code r33 */
-    //#define I2C_GPS
+ //   #define I2C_GPS
     // If your I2C GPS board has Sonar support enabled
     //#define I2C_GPS_SONAR
 
