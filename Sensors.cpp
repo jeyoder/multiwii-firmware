@@ -228,7 +228,7 @@ uint8_t i2c_readNak(void) {
   return i2c_read(0);
 }
 
-void waitTransmissionI2C() {
+void waitTransmissionI2C() { 
   uint16_t count = 255;
   while (!(TWCR & (1<<TWINT))) {
     count--;
